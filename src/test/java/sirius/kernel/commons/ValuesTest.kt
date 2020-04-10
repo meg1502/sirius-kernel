@@ -5,33 +5,29 @@
  * Copyright by scireum GmbH
  * http://www.scireum.de - info@scireum.de
  */
+package sirius.kernel.commons
 
-package sirius.kernel.commons;
+import com.google.common.collect.Lists
+import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
-import com.google.common.collect.Lists;
-import org.junit.Test;
-
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
-public class ValuesTest {
+class ValuesTest {
     @Test
-    public void at() {
-        assertEquals("A", Values.of(new String[]{"A", "B", "C"}).at(0).asString());
-        assertFalse(Values.of(new String[]{"A", "B", "C"}).at(10).isFilled());
+    fun at() {
+        assertEquals("A", Values.of(arrayOf("A", "B", "C")).at(0).asString())
+        assertFalse(Values.of(arrayOf("A", "B", "C")).at(10).isFilled)
     }
 
     @Test
-    public void excelStyleColumns() {
-        assertEquals("A", Values.of(new String[]{"A", "B", "C"}).at("A").asString());
-        assertEquals("C", Values.of(new String[]{"A", "B", "C"}).at("C").asString());
-        List<String> test = Lists.newArrayList();
-        for (int i = 1; i < 100; i++) {
-            test.add(String.valueOf(i));
+    fun excelStyleColumns() {
+        assertEquals("A", Values.of(arrayOf("A", "B", "C")).at("A").asString())
+        assertEquals("C", Values.of(arrayOf("A", "B", "C")).at("C").asString())
+        val test: MutableList<String?> = Lists.newArrayList()
+        for (i in 1..99) {
+            test.add(i.toString())
         }
-        assertEquals("28", Values.of(test).at("AB").asString());
-        assertEquals("34", Values.of(test).at("AH").asString());
+        assertEquals("28", Values.of(test).at("AB").asString())
+        assertEquals("34", Values.of(test).at("AH").asString())
     }
 }
