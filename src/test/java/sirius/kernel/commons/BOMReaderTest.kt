@@ -8,11 +8,13 @@
 package sirius.kernel.commons
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import sirius.kernel.SiriusLifecycleExtension
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.io.InputStreamReader
 import kotlin.test.assertEquals
 
+@ExtendWith(SiriusLifecycleExtension::class)
 class BOMReaderTest {
 
     companion object {
@@ -21,24 +23,21 @@ class BOMReaderTest {
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readBOM() {
+    fun `read BOM`() {
         val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITH_UTF8_BOM)))
         assertEquals('H'.toLong(), reader.read().toLong())
         assertEquals('E'.toLong(), reader.read().toLong())
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readWithoutBOM() {
+    fun `read without BOM`() {
         val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITHOUT_BOM)))
         assertEquals('H'.toLong(), reader.read().toLong())
         assertEquals('E'.toLong(), reader.read().toLong())
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readArray1BOM() {
+    fun `read Array1 BOM`() {
         val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITH_UTF8_BOM)))
         val buffer = CharArray(1)
         assertEquals(1, reader.read(buffer).toLong())
@@ -46,8 +45,7 @@ class BOMReaderTest {
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readArray2BOM() {
+    fun `read Array2 BOM`() {
         val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITH_UTF8_BOM)))
         val buffer = CharArray(2)
         assertEquals(2, reader.read(buffer).toLong())
@@ -55,8 +53,7 @@ class BOMReaderTest {
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readArray10BOM() {
+    fun `read Array10 BOM`() {
         val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITH_UTF8_BOM)))
         val buffer = CharArray(10)
         assertEquals(5, reader.read(buffer).toLong())
@@ -64,9 +61,8 @@ class BOMReaderTest {
     }
 
     @Test
-    @Throws(IOException::class)
-    fun readArrayWithoutBOM() {
-        val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITH_UTF8_BOM)))
+    fun `read Array without BOM`() {
+        val reader = BOMReader(InputStreamReader(ByteArrayInputStream(WITHOUT_BOM)))
         val buffer = CharArray(2)
         assertEquals(2, reader.read(buffer).toLong())
         assertEquals('H'.toLong(), buffer[0].toLong())

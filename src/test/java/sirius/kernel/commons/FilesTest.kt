@@ -14,7 +14,7 @@ import kotlin.test.assertNull
 
 class FilesTest {
     @Test
-    fun testgetFileExtension() {
+    fun `get file extension`() {
         assertEquals("txt", Files.getFileExtension("text.txt"))
         assertEquals("txt", Files.getFileExtension("/foo/bar/text.txt"))
         assertEquals("txt", Files.getFileExtension("/foo/bar/text.foo.txt"))
@@ -24,7 +24,7 @@ class FilesTest {
     }
 
     @Test
-    fun testgetBasepath() {
+    fun `get base path`() {
         assertEquals("/foo", Files.getBasepath("/foo/test.txt"))
         assertEquals("/foo", Files.getBasepath("/foo/bar"))
         assertEquals("/foo/bar", Files.getBasepath("/foo/bar/test.txt"))
@@ -37,7 +37,7 @@ class FilesTest {
     }
 
     @Test
-    fun testgetFilenameAndExtension() {
+    fun `get filename and extension`() {
         assertEquals("test.txt", Files.getFilenameAndExtension("/foo/bar/test.txt"))
         assertEquals("test.txt", Files.getFilenameAndExtension("test.txt"))
         assertEquals("test.txt", Files.getFilenameAndExtension("bar/test.txt"))
@@ -49,7 +49,7 @@ class FilesTest {
     }
 
     @Test
-    fun testgetFilenameWithoutExtension() {
+    fun `get filename without extension`() {
         assertEquals("test", Files.getFilenameWithoutExtension("test.txt"))
         assertEquals("test", Files.getFilenameWithoutExtension("test"))
         assertEquals("test", Files.getFilenameWithoutExtension("/bar/test.txt"))
@@ -61,7 +61,7 @@ class FilesTest {
     }
 
     @Test
-    fun toSaneFilename() {
+    fun `to sane filename`() {
         assertEquals("test.pdf", Files.toSaneFileName("test.pdf").orElse(""))
         assertEquals("test", Files.toSaneFileName("test").orElse(""))
         assertEquals(".pdf", Files.toSaneFileName(".pdf").orElse(""))

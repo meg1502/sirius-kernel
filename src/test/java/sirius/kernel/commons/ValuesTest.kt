@@ -19,7 +19,7 @@ class ValuesTest {
     }
 
     @Test
-    fun excelStyleColumns() {
+    fun `excel style columns`() {
         assertEquals("A", Values.of(arrayOf("A", "B", "C")).at("A").asString())
         assertEquals("C", Values.of(arrayOf("A", "B", "C")).at("C").asString())
         val test: MutableList<String?> = mutableListOf()
