@@ -9,13 +9,13 @@
 package sirius.kernel.cache
 
 import sirius.kernel.BaseSpecification
-import sirius.kernel.Scope
+import sirius.kernel.RunNightly
 import sirius.kernel.commons.Strings
 import sirius.kernel.commons.Wait
 
 class ManagedCacheSpec extends BaseSpecification {
 
-    @Scope(Scope.SCOPE_NIGHTLY)
+    @RunNightly
     def "test run eviction removes old entries"() {
         given:
         def cache = new ManagedCache("test-cache", null, null)
