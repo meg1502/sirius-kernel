@@ -39,14 +39,6 @@ public interface StructuredOutput {
     void endResult();
 
     /**
-     * Starts a new object with the given name.
-     *
-     * @param name the name of the element to start
-     * @return the output itself for fluent method calls
-     */
-    StructuredOutput beginObject(@Nonnull String name);
-
-    /**
      * Starts a new object with the given name and attributes
      *
      * @param name       the name of the object to create
@@ -61,6 +53,14 @@ public interface StructuredOutput {
      * @return the output itself for fluent method calls
      */
     StructuredOutput endObject();
+
+    /**
+     * Outputs all record components of the given record as an object with the given name.
+     * @param name the name to use for the object
+     * @param object the record itself to output. Note that if <tt>object</tt> is <tt>null</tt>, nothing will be output
+     * @return the output itself for fluent method calls
+     */
+    StructuredOutput object(@Nonnull String name, Record object);
 
     /**
      * Adds a property to the current object.

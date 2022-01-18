@@ -8,9 +8,14 @@
 
 package sirius.kernel.xml;
 
+import sirius.kernel.commons.Strings;
+import sirius.kernel.nls.NLS;
+
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.RecordComponent;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,6 +26,7 @@ import java.util.function.BiConsumer;
  */
 public abstract class AbstractStructuredOutput implements StructuredOutput {
 
+    private static final Attribute[] EMPTY_ATTRIBUTES_ARRAY = new Attribute[0];
     protected List<Element> nesting = new ArrayList<>();
 
     /**
@@ -35,8 +41,8 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
      */
     protected static class Element {
 
-        private ElementType type;
-        private String name;
+        private final ElementType type;
+        private final String name;
         private boolean empty = true;
 
         protected Element(ElementType type, String name) {
@@ -148,6 +154,29 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
      */
     protected abstract void endObject(String name);
 
+    @Override
+    public StructuredOutput object(@Nonnull String name, Record object) {
+        if (object == null) {
+            return this;
+        }
+
+        beginObject(name);
+        for (RecordComponent component : object.getClass().getRecordComponents()) {
+            try {
+                property(component.getName(), component.getAccessor().invoke(object));
+            } catch (Exception e) {
+                throw new IllegalArgumentException(Strings.apply(
+                        "Failed to serialize record component %s of record %s with type %s: %s",
+                        component.getName(),
+                        object,
+                        object.getClass().getName(),
+                        e.getMessage()));
+            }
+        }
+
+        return endObject();
+    }
+
     /**
      * Must be implemented by subclasses to generate a property.
      *
@@ -156,14 +185,22 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
      */
     protected abstract void writeProperty(String name, Object value);
 
-    @Override
-    public StructuredOutput beginObject(String name) {
-        startObject(name, (Attribute[]) null);
-        if (!nesting.isEmpty()) {
-            nesting.get(0).setEmpty(false);
+    /**
+     * Creates the string representation to be used when outputting the given value.
+     *
+     * @param value the value to represent
+     * @return the machine-readable string representation of the value
+     */
+    protected String transformToStringRepresentation(Object value) {
+        // We preserve some objects here because:
+        //  * String: as NLS.toMachineString performs an implicit trim which might be unwanted here.
+        //  * LocalDateTime: as we want a "full ISO" format "date"T"time" and not "date" "time" as NLS.toMachineString
+        //    does
+        if ((value instanceof String) || (value instanceof LocalDateTime)) {
+            return value.toString();
+        } else {
+            return NLS.toMachineString(value);
         }
-        nesting.add(0, new Element(ElementType.OBJECT, name));
-        return this;
     }
 
     @Override
@@ -180,8 +217,8 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
      * Used to fluently create a {@link #beginObject(String, Attribute...)}.
      */
     public class TagBuilder {
-        private List<Attribute> attributes = new ArrayList<>();
-        private String name;
+        private final List<Attribute> attributes = new ArrayList<>();
+        private final String name;
 
         /**
          * Creates a new TabBuilder with the given tag name
@@ -205,10 +242,23 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         }
 
         /**
+         * Adds an attribute to the tag
+         *
+         * @param namespace the namespace of the attribute to add
+         * @param name      the name of the attribute to add
+         * @param value     the value of the attribute to add
+         * @return <tt>this</tt> to fluently add more attributes
+         */
+        public TagBuilder addAttribute(@Nonnull String namespace, @Nonnull String name, @Nullable String value) {
+            attributes.add(Attribute.set(namespace, name, value));
+            return this;
+        }
+
+        /**
          * Finally creates the tag or object with the given name and attributes.
          */
         public void build() {
-            beginObject(name, attributes.toArray(new Attribute[attributes.size()]));
+            beginObject(name, attributes.toArray(EMPTY_ATTRIBUTES_ARRAY));
         }
     }
 
@@ -265,7 +315,11 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         if (getCurrentType() != ElementType.OBJECT && getCurrentType() != ElementType.ARRAY) {
             throw new IllegalArgumentException("Invalid result structure. Cannot place a property here.");
         }
-        writeProperty(name, data);
+        if (data instanceof Record record) {
+            object(name, record);
+        } else {
+            writeProperty(name, data);
+        }
         nesting.get(0).setEmpty(false);
         return this;
     }

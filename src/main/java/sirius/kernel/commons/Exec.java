@@ -19,14 +19,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serial;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 
 /**
  * A robust wrapper around calls to external programs.
  */
-@SuppressWarnings("squid:S1149")
-@Explain("We actually need the thread safety probided by StringBuffer here, as we start 2 threads per call.")
 public class Exec {
 
     /**
@@ -43,11 +42,11 @@ public class Exec {
     private static class StreamEater implements Runnable {
 
         private final InputStream stream;
-        private final StringBuffer logger;
+        private final StringBuilder logger;
         private final ValueHolder<IOException> exHolder = new ValueHolder<>(null);
         private final Semaphore completionSynchronizer;
 
-        StreamEater(InputStream stream, StringBuffer log, Semaphore completionSynchronizer)
+        StreamEater(InputStream stream, StringBuilder log, Semaphore completionSynchronizer)
                 throws InterruptedException {
             this.stream = stream;
             this.logger = log;
@@ -61,13 +60,17 @@ public class Exec {
                 Thread.currentThread()
                       .setName(StreamEater.class.getSimpleName() + "-" + Thread.currentThread().getId());
                 String line = br.readLine();
-                while (line != null) {
-                    logger.append(line);
-                    logger.append("\n");
-                    line = br.readLine();
+                synchronized (logger) {
+                    while (line != null) {
+                        logger.append(line);
+                        logger.append("\n");
+                        line = br.readLine();
+                    }
                 }
             } catch (IOException e) {
-                logger.append(NLS.toUserString(e));
+                synchronized (logger) {
+                    logger.append(NLS.toUserString(e));
+                }
                 exHolder.set(e);
             } finally {
                 this.completionSynchronizer.release();
@@ -82,7 +85,7 @@ public class Exec {
          * @param completionSynchronizer a semaphore where a permit is acquired and released once all output hase been processed
          * @return a new stream eater which is already running in a separate thread
          */
-        static StreamEater eat(InputStream stream, StringBuffer logger, Semaphore completionSynchronizer)
+        static StreamEater eat(InputStream stream, StringBuilder logger, Semaphore completionSynchronizer)
                 throws InterruptedException {
             StreamEater eater = new StreamEater(stream, logger, completionSynchronizer);
             new Thread(eater).start();
@@ -95,6 +98,7 @@ public class Exec {
      */
     public static class ExecException extends Exception {
 
+        @Serial
         private static final long serialVersionUID = -4736872491172480346L;
         private final String log;
 
@@ -164,7 +168,7 @@ public class Exec {
      */
     public static String exec(String command, boolean ignoreExitCodes, Duration opTimeout, @Nullable File directory)
             throws ExecException {
-        StringBuffer logger = new StringBuffer();
+        StringBuilder logger = new StringBuilder();
         try (Operation op = new Operation(() -> command, opTimeout)) {
             Process p = Runtime.getRuntime().exec(command, null, directory);
             Semaphore completionSynchronizer = new Semaphore(2);
@@ -182,12 +186,15 @@ public class Exec {
                 throw new ExecException(outEater.exHolder.get(), logger.toString());
             }
             return logger.toString();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExecException(e, logger.toString());
         } catch (Exception e) {
             throw new ExecException(e, logger.toString());
         }
     }
 
-    private static void doExec(boolean ignoreExitCodes, StringBuffer logger, Process p) throws ExecException {
+    private static void doExec(boolean ignoreExitCodes, StringBuilder logger, Process p) throws ExecException {
         try {
             int code = p.waitFor();
             if (code != 0 && !ignoreExitCodes) {

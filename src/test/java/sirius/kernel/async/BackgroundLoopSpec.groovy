@@ -8,7 +8,6 @@
 
 package sirius.kernel.async
 
-
 import sirius.kernel.BaseSpecification
 import sirius.kernel.RunNightly
 import sirius.kernel.commons.Wait

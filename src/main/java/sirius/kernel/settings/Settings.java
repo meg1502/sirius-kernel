@@ -8,7 +8,6 @@
 
 package sirius.kernel.settings;
 
-import com.google.common.collect.Lists;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -29,6 +28,7 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.lang.reflect.Field;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Provides a wrapper around a {@link Config} supplied by <tt>typesafe config</tt>.
@@ -54,7 +55,7 @@ public class Settings {
     private static final String ID = "id";
 
     private final Config config;
-    private final boolean strict;
+    protected final boolean strict;
 
     /**
      * Creates a new wrapper for the given config.
@@ -64,7 +65,7 @@ public class Settings {
      *               requested
      */
     public Settings(Config config, boolean strict) {
-        this.config = config;
+        this.config = config.isResolved() ? config : config.resolve();
         this.strict = strict;
     }
 
@@ -177,12 +178,13 @@ public class Settings {
      * natural order within the file. If multiple files are merged together, the behaviour of this approach is
      * undefined and <tt>priority</tt> should be used.
      *
-     * @param key the path to the config object containing a list of sub object.
+     * @param key the path to the config object containing multiple sub objects.
      * @return a list of config objects underneath the given object or an empty list if there are none
+     * @see #getConfigList(String)
      */
     @Nonnull
     public List<? extends Config> getConfigs(String key) {
-        List<Config> result = Lists.newArrayList();
+        List<Config> result = new ArrayList<>();
         Config cfg = getConfig(key);
         if (cfg != null) {
             for (Map.Entry<String, ConfigValue> e : cfg.root().entrySet()) {
@@ -209,6 +211,29 @@ public class Settings {
     }
 
     /**
+     * Returns all config objects in a list underneath the given key.
+     *
+     * @param key the path to the config object containing a list of sub objects.
+     * @return a list of config objects underneath the given object or an empty list if there are none
+     * @see #getConfigs(String)
+     * @see #getStringList(String)
+     */
+    @Nonnull
+    public List<Settings> getConfigList(String key) {
+        try {
+            return getConfig().getConfigList(key)
+                              .stream()
+                              .map(subConfig -> new Settings(subConfig, strict))
+                              .collect(Collectors.toList());
+        } catch (ConfigException e) {
+            if (strict) {
+                Exceptions.handle(e);
+            }
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Returns the duration in milliseconds defined for the given key.
      * <p>
      * If no config is present at the given path, or it can not be converted to a duration, 0 is returned.
@@ -217,13 +242,25 @@ public class Settings {
      * @return the duration as milliseconds
      */
     public long getMilliseconds(String path) {
+        return getDuration(path).toMillis();
+    }
+
+    /**
+     * Returns the duration defined for the given key.
+     * <p>
+     * If no config is present at the given path, or it can not be converted to a duration, {@link Duration#ZERO} is returned.
+     *
+     * @param path the access path to retrieve the value
+     * @return the duration
+     */
+    public Duration getDuration(String path) {
         try {
-            return config.getDuration(path, TimeUnit.MILLISECONDS);
+            return config.getDuration(path);
         } catch (Exception e) {
             if (strict) {
                 Exceptions.handle(e);
             }
-            return 0;
+            return Duration.ZERO;
         }
     }
 
